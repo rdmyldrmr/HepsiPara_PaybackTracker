@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HepsiPara Geri Ödeme Tablosu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 600px; /* İçerik genişliğini sınırlandır */
+            margin: 0 auto; /* Ortala */
+            padding: 20px;
+            background: white; /* Beyaz arka plan */
+            border-radius: 8px; /* Köşeleri yuvarla */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Hafif gölge */
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            font-size: 16px; /* Hücre içi metin boyutu */
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .completed {
+            text-decoration: line-through; /* Üzerini çizme stili */
+            color: gray; /* Üzerini çizilmiş metin rengi */
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px; /* Yuvarlak köşeler */
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%; /* Tam yuvarlak */
+        }
+        input:checked + .slider {
+            background-color: #4CAF50; /* Yeşil arka plan */
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px); /* Anahtarı sağa hareket ettir */
+        }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
+            th, td {
+                font-size: 14px; /* Küçük ekranlarda font boyutunu azalt */
+            }
+            button {
+                font-size: 14px; /* Buton font boyutunu ayarla */
+            }
+        }
+    </style>
+    <script>
+        var veriler = JSON.parse(localStorage.getItem("kullaniciVerileri")) || []; // Global veri değişkeni
+        var editIndex = -1; // Düzenleme yapmak için kullanılacak index
+
+        function kaydet() {
+            var ad = document.getElementById("ad").value;
+            var miktar = parseFloat(ad);
+
+            if (isNaN(miktar) || miktar < 0 || miktar > 25) {
+                alert("Lütfen 0 ile 25 arasında bir sayı girin.");
+                return;
+            }
+
+            var baslangicTarihi = new Date();
+            var bitisTarihi = new Date();
+            bitisTarihi.setDate(baslangicTarihi.getDate() + 15);
+
+            if (editIndex >= 0) {
+                // Eğer düzenleme yapılacaksa var olan veriyi güncelle
+                veriler[editIndex] = { 
+                    ad: miktar, 
+                    tarih: baslangicTarihi, 
+                    bitisTarihi: bitisTarihi, 
+                    completed: false 
+                };
+                editIndex = -1; // düzenleme tamamlandı
+            } else {
+                veriler.push({ ad: miktar, tarih: baslangicTarihi, bitisTarihi: bitisTarihi, completed: false });
+            }
+
+            localStorage.setItem("kullaniciVerileri", JSON.stringify(veriler));
+            tabloyuGoster();
+            clearInput(); // Giriş alanını temizleyin
+        }
+
+        function clearInput() {
+            document.getElementById("ad").value = "";
+        }
+
+        function tabloyuGoster() {
+            var tabloGövdesi = document.getElementById("veriTablosuGövde");
+            tabloGövdesi.innerHTML = "";
+
+            veriler.forEach(function(item, index) {
+                var tr = document.createElement("tr");
+
+                var tdAd = document.createElement("td");
+                tdAd.textContent = item.ad;
+                if (item.completed) {
+                    tdAd.classList.add("completed"); // Üzerini çiz
+                }
+                tr.appendChild(tdAd);
+
+                var tdTarih = document.createElement("td");
+                tdTarih.textContent = tarihFormatla(new Date(item.tarih));
+                if (item.completed) {
+                    tdTarih.classList.add("completed"); // Üzerini çiz
+                }
+                tr.appendChild(tdTarih);
+
+                var tdBitis = document.createElement("td");
+                tdBitis.textContent = tarihFormatla(new Date(item.bitisTarihi));
+                if (item.completed) {
+                    tdBitis.classList.add("completed"); // Üzerini çiz
+                }
+                tr.appendChild(tdBitis);
+
+                // Toggle switch oluşturma
+                var tdToggle = document.createElement("td");
+                var toggleSwitch = document.createElement("label");
+                toggleSwitch.className = "switch";
+
+                var toggleInput = document.createElement("input");
+                toggleInput.type = "checkbox";
+                toggleInput.checked = item.completed; // Check durumu
+                toggleInput.onchange = function() {
+                    item.completed = !item.completed; // Toggle durumu
+                    localStorage.setItem("kullaniciVerileri", JSON.stringify(veriler)); // Güncelle
+                    tabloyuGoster(); // Tabloyu göster
+                };
+
+                var slider = document.createElement("span");
+                slider.className = "slider";
+
+                toggleSwitch.appendChild(toggleInput);
+                toggleSwitch.appendChild(slider);
+                tdToggle.appendChild(toggleSwitch);
+                tr.appendChild(tdToggle);
+
+                // Düzenleme butonu
+                var tdEdit = document.createElement("td");
+                var editButton = document.createElement("button");
+                editButton.textContent = "Düzenle";
+                editButton.onclick = function() {
+                    document.getElementById("ad").value = item.ad; // Giriş alanını güncelle
+                    editIndex = index; // Düzenlenecek verinin indeksini kaydet
+                };
+                tdEdit.appendChild(editButton);
+                tr.appendChild(tdEdit);
+
+                // Silme butonu
+                var tdDelete = document.createElement("td");
+                var deleteButton = document.createElement("button");
+                deleteButton.textContent = "Sil";
+                deleteButton.onclick = function() {
+                    veriler.splice(index, 1); // İlgili veriyi diziden kaldır
+                    localStorage.setItem("kullaniciVerileri", JSON.stringify(veriler)); // Güncelle
+                    tabloyuGoster(); // Tabloyu güncelle
+                };
+                tdDelete.appendChild(deleteButton);
+                tr.appendChild(tdDelete);
+
+                tabloGövdesi.appendChild(tr);
+            });
+        }
+
+        function tarihFormatla(tarih) {
+            var gun = tarih.getDate().toString().padStart(2, '0');
+            var ay = (tarih.getMonth() + 1).toString().padStart(2, '0');
+            var yil = tarih.getFullYear();
+            return gun + '/' + ay + '/' + yil;
+        }
+
+        window.onload = tabloyuGoster;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>HepsiPara Geri Ödeme Tablosu</h1>
+        <input type="text" id="ad" placeholder="0 ile 25 arasında bir sayı girin">
+        <button onclick="kaydet()">Kaydet</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Geri Ödeme Miktarı</th>
+                    <th>İşlem Tarihi</th>
+                    <th>Geri Ödeme Tarihi</th>
+                    <th>Durum</th> <!-- Yeni sütun başlığı "Durum" -->
+                    <th>Düzenle</th> <!-- Düzenleme butonu için sütun -->
+                    <th>Sil</th> <!-- Silme butonu için sütun -->
+                </tr>
+            </thead>
+            <tbody id="veriTablosuGövde">
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
